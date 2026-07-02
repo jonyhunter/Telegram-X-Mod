@@ -3,6 +3,7 @@
 .gradle
 .kotlin
 .idea
+.codex-tools/
 
 build
 .cxx

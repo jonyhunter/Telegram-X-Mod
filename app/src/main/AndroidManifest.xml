@@ -196,6 +196,17 @@
       android:syncable="true" />
 
     <provider
+      android:name=".provider.TgxCacheDocumentsProvider"
+      android:authorities="${applicationId}.cache.documents"
+      android:exported="true"
+      android:grantUriPermissions="true"
+      android:permission="android.permission.MANAGE_DOCUMENTS">
+      <intent-filter>
+        <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+      </intent-filter>
+    </provider>
+
+    <provider
       android:name="androidx.startup.InitializationProvider"
       android:authorities="${applicationId}.androidx-startup"
       android:exported="false"
