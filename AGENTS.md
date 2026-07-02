@@ -33,6 +33,50 @@ upstream = https://github.com/TGX-Android/Telegram-X.git
 DISABLED_PUSH_TO_UPSTREAM
 ```
 
+## 提交或同步前清理工作区
+
+在提交本地修改、同步 `upstream/main` 或执行 `rebase` 前，建议先确认工作区是否干净：
+
+```powershell
+cd G:\TelegramX-Mod\Telegram-X
+
+git status --short
+```
+
+如果只有本机构建/生成状态，例如 `ffmpeg`、`libvpx`、`opus`、Emoji 生成文件或 `vkryl/td` 行尾变化，可以按以下命令清理：
+
+```powershell
+cd G:\TelegramX-Mod\Telegram-X
+
+git restore app/src/main/java/org/thunderdog/challegram/tool/EmojiBidi.kt
+git restore app/src/main/java/org/thunderdog/challegram/tool/EmojiBidiLegacy.kt
+git restore app/src/main/java/org/thunderdog/challegram/tool/Emojis.kt
+
+git -C vkryl\td restore src/main/kotlin/tgx/td/TdCompileAssert.kt
+git -C vkryl\td restore src/main/kotlin/tgx/td/TdEqualsTo.kt
+git -C vkryl\td restore src/main/kotlin/tgx/td/TdUnsupported.kt
+
+git -C app\jni\third_party\ffmpeg clean -fdx
+git -C app\jni\third_party\libvpx clean -fdx
+
+git -C app\jni\third_party\opus restore celt/arm/celt_pitch_xcorr_arm.s
+git -C app\jni\third_party\opus clean -fdx
+```
+
+清理后再次确认：
+
+```powershell
+git status --short
+```
+
+注意：清理 `ffmpeg`、`libvpx`、`opus` 会删除本地 native 构建缓存和生成文件。之后如果重新全量构建 APK，可能需要重新运行相关 native patch/build 脚本，构建耗时会明显增加。
+
+Windows 下重新运行 Opus patch 后，需要特别检查生成的汇编 include 行。如果 `celt_pitch_xcorr_arm_gnu.s` 中出现类似 `.include "celt/arm/armopts_gnu.s\r"` 的 CR 字符残留，CMake/clang 会报 `Could not find include file 'celt/arm/armopts_gnu.s'`。可用以下命令移除生成文件中的 CR 字符：
+
+```powershell
+& 'C:\msys64\usr\bin\bash.exe' -lc 'cd /g/TelegramX-Mod/Telegram-X && perl -pi -e "s/\r//g" app/jni/third_party/opus/celt/arm/celt_pitch_xcorr_arm_gnu.s app/jni/third_party/opus/celt/arm/armopts_gnu.s'
+```
+
 ## 同步官方更新
 
 当官方 `TGX-Android/Telegram-X` 有新提交时，按以下流程把官方更新合并到当前项目，同时保留本地 provider 功能：
@@ -113,6 +157,8 @@ G:\TelegramX-Mod\Telegram-X\app\build\outputs\apk\latestUniversal\debug\
 ## 注意事项
 
 - 不要把 native 子模块中的构建生成文件提交到 provider 功能提交中。
+- 清理 native 子模块后，如果构建再次遇到缺少 Opus 汇编或 ffmpeg/libvpx 静态库，需要重新执行项目脚本生成这些本地构建产物。
+- Windows 下重新执行 Opus patch 后，如果 native 编译报找不到 `armopts_gnu.s`，优先检查生成汇编文件中的 CR 字符残留，并按上文命令清理。
 - provider 功能相关的长期代码主要在：
   - `app/src/main/java/org/thunderdog/challegram/provider/TgxCacheDocumentsProvider.java`
   - `app/src/main/AndroidManifest.xml`
