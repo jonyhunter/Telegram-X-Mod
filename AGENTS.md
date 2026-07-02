@@ -33,9 +33,9 @@ upstream = https://github.com/TGX-Android/Telegram-X.git
 DISABLED_PUSH_TO_UPSTREAM
 ```
 
-## 提交或同步前清理工作区
+## 同步前清理工作区
 
-在提交本地修改、同步 `upstream/main` 或执行 `rebase` 前，建议先确认工作区是否干净：
+在同步 `upstream/main` 或执行 `rebase` 前，建议先确认工作区是否干净：
 
 ```powershell
 cd G:\TelegramX-Mod\Telegram-X
@@ -141,6 +141,26 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 ```text
 G:\TelegramX-Mod\Telegram-X\app\build\outputs\apk\latestUniversal\debug\
 ```
+
+## 本地 Release 打包
+
+当前本地 release APK 推荐只打 `arm64-v8a` 架构：
+
+```powershell
+cd G:\TelegramX-Mod\Telegram-X
+
+$env:JAVA_HOME=(Get-ChildItem -Directory '.codex-tools\jdk21' | Select-Object -First 1 -ExpandProperty FullName)
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+.\gradlew.bat :app:assembleLatestArm64Release -x :app:validateApiTokens --console=plain
+```
+
+产物通常位于：
+
+```text
+G:\TelegramX-Mod\Telegram-X\app\build\outputs\apk\latestArm64\release\
+```
+
+`-x :app:validateApiTokens` 用于跳过当前本地包名 `app.jony.tgz` 与仓库内 `google-services.json` 不匹配导致的 Firebase / Google Services 校验。这样可以打出非实验 release APK；但如果没有为 `app.jony.tgz` 准备真实 `google-services.json`，推送通知相关能力可能不可用。
 
 ## 敏感配置
 
