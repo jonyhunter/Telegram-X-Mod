@@ -33,6 +33,21 @@ private data class Versions(
   )
 }
 
+private fun enabledNativeAbiFilters(): List<String> {
+  return loadProperties().getProperty("app.abis", "")
+    .split(",")
+    .mapNotNull {
+      when (it.trim().lowercase()) {
+        "arm32", "armeabi-v7a" -> "armeabi-v7a"
+        "arm64", "arm64-v8a" -> "arm64-v8a"
+        "x86" -> "x86"
+        "x64", "x86_64" -> "x86_64"
+        else -> null
+      }
+    }
+    .distinct()
+}
+
 open class ModulePlugin : Plugin<Project> {
   override fun apply(project: Project) {
     val config = try {
@@ -51,6 +66,7 @@ open class ModulePlugin : Plugin<Project> {
         legacyNdk = versions.getOrThrow("version.ndk_legacy")
       )
     }
+    val enabledNativeAbiFilters = enabledNativeAbiFilters()
 
     val libs = project.the<LibrariesForLibs>()
     project.dependencies {
@@ -103,6 +119,9 @@ open class ModulePlugin : Plugin<Project> {
           defaultConfig {
             minSdk = Config.MIN_SDK_VERSION
             multiDexEnabled = true
+            if (enabledNativeAbiFilters.isNotEmpty()) {
+              ndk.abiFilters.addAll(enabledNativeAbiFilters)
+            }
           }
           flavorDimensions += "SDK"
           productFlavors {

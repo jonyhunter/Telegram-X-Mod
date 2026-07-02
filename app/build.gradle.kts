@@ -39,6 +39,11 @@ val checkEmojiKeyboard = tasks.register<CheckEmojiKeyboardTask>("checkEmojiKeybo
 }
 
 val config = extra["config"] as ApplicationConfig
+val enabledAbiFlavors = loadProperties().getProperty("app.abis", "")
+  .split(",")
+  .map { it.trim().lowercase() }
+  .filter { it.isNotEmpty() }
+  .toSet()
 
 //noinspection WrongGradleMethod
 android {
@@ -258,6 +263,7 @@ android {
       variantBuilder.maxSdk = sdkVariant.maxSdk
     }
     variantBuilder.enable = sdkVariant.minSdk >= abiVariant.minSdk &&
+      (enabledAbiFlavors.isEmpty() || enabledAbiFlavors.contains(abiVariant.flavor)) &&
       !(abiVariant.flavor == "universal" && sdkVariant.flavor == "legacy") &&
       (variantBuilder.buildType != "debug" || sdkVariant.flavor == "legacy" || (abiVariant.flavor == "x86" || abiVariant.flavor == "x64" || abiVariant.flavor == "universal"))
   }
@@ -466,9 +472,8 @@ android {
           into(project.layout.buildDirectory.dir("outputs/mapping/${variant.name}"))
           rename("mapping.txt", "$fileName.txt")
         }
-        tasks.named {
-          it.startsWith("assemble") && it.endsWith("Release")
-        }.configureEach {
+        val assembleTaskName = "assemble${variant.name.replaceFirstChar { it.uppercase() }}"
+        tasks.matching { it.name == assembleTaskName }.configureEach {
           finalizedBy(copyTask)
         }
       }

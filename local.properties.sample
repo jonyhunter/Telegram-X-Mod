@@ -16,6 +16,14 @@ app.id=org.example.tgx
 ## Project name
 app.name=TGX Example
 
+## Comma-separated ABI flavors to build. Leave empty to build all.
+# Supported values: arm32, arm64, x86, x64, universal
+app.abis=arm64
+
+## Comma-separated translation language codes to fetch in addition to English.
+## Leave empty to fetch all languages.
+app.languages=zh-hans
+
 ## Link to the app's website. If unavailable, link to the market page could be used.
 app.download_url=https://telegram.org/dlx
 

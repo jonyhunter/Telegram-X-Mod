@@ -139,15 +139,22 @@ fun editFile(path: String, block: (String) -> String) {
 }
 
 fun areFileContentsIdentical(a: File, b: File): Boolean {
-  val areIdentical: Boolean
-  FileChannel.open(a.toPath(), StandardOpenOption.READ).use { fileChannelA ->
-    FileChannel.open(b.toPath(), StandardOpenOption.READ).use { fileChannelB ->
-      val mapA = fileChannelA.map(FileChannel.MapMode.READ_ONLY, 0, fileChannelA.size())
-      val mapB = fileChannelB.map(FileChannel.MapMode.READ_ONLY, 0, fileChannelB.size())
-      areIdentical = mapA == mapB
+  if (a.length() != b.length()) {
+    return false
+  }
+  a.inputStream().buffered().use { inputA ->
+    b.inputStream().buffered().use { inputB ->
+      while (true) {
+        val byteA = inputA.read()
+        if (byteA == -1) {
+          return true
+        }
+        if (byteA != inputB.read()) {
+          return false
+        }
+      }
     }
   }
-  return areIdentical
 }
 
 fun String.camelCaseToUpperCase(): String {

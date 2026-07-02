@@ -24,6 +24,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.*
 import org.gradle.api.tasks.TaskAction
 import tgx.gradle.fatal
+import tgx.gradle.loadProperties
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -35,6 +37,11 @@ open class FetchLanguagesTask : BaseTask() {
     val rtlKey = "language_rtl"
     val nameKey = "AppName"
     val defaultLanguageCode = "en"
+    val enabledLanguages = loadProperties().getProperty("app.languages", "")
+      .split(",")
+      .map { it.trim().lowercase() }
+      .filter { it.isNotEmpty() }
+      .toSet()
 
     val knownOutputFolders = mapOf(
       Pair("pt-br", arrayOf("pt-rBR")),
@@ -134,10 +141,13 @@ open class FetchLanguagesTask : BaseTask() {
       .url("https://translations.telegram.org/languages/list/${Telegram.LANGUAGE_PACK}")
       .build()
     ).execute().body.string()
-    val languageCodes = Json.parseToJsonElement(languageCodesJson).jsonObject["lang_codes"]!!.jsonArray.map {
+    var languageCodes = Json.parseToJsonElement(languageCodesJson).jsonObject["lang_codes"]!!.jsonArray.map {
       it.jsonPrimitive.content
     }.sortedWith { a, b ->
       (b == defaultLanguageCode).compareTo(a == defaultLanguageCode)
+    }
+    if (enabledLanguages.isNotEmpty()) {
+      languageCodes = languageCodes.filter { it == defaultLanguageCode || enabledLanguages.contains(it) }
     }
     if (languageCodes[0] != defaultLanguageCode) {
       fatal("Default language not found: $languageCodes")
@@ -270,6 +280,7 @@ open class FetchLanguagesTask : BaseTask() {
       writeToFile("app/src/main/res/.gitignore") { gitignore ->
         gitignore.append(allFolders.sorted().joinToString("\n") { "values-$it" })
       }
+      removeDisabledLanguageFolders(allFolders)
     }
     logger.lifecycle("Updated .gitignore in ${time}ms")
 
@@ -283,5 +294,19 @@ open class FetchLanguagesTask : BaseTask() {
     }
 
     logger.lifecycle("Updated all languages")
+  }
+
+  private fun removeDisabledLanguageFolders(enabledFolders: List<String>) {
+    val enabledFolderNames = enabledFolders.map { "values-$it" }.toSet()
+    val resFolder = File(project.rootDir, "app/src/main/res")
+    if (!resFolder.exists()) {
+      return
+    }
+    val generatedLanguageFolder = Regex("^values-(?:[a-z]{2,3}|[a-z]{2}-r[A-Z]{2}|pt-rBR|b\\+zh\\+Hans\\+(?:HK|MO))$")
+    resFolder.listFiles()
+      ?.filter { it.isDirectory && generatedLanguageFolder.matches(it.name) && !enabledFolderNames.contains(it.name) }
+      ?.forEach { folder ->
+        folder.deleteRecursively()
+      }
   }
 }
