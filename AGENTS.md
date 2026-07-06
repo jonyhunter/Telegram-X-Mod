@@ -10,6 +10,30 @@
 docs/TELEGRAM_Z_CUSTOMIZATIONS.md
 ```
 
+## 轻量仓库同步 main
+
+如果日常开发使用 `G:\TelegramZ-light` 这种 partial/shallow clone，后续远端 `main` 有更新时，不要只抓取 `main` 的最后 1 条提交；否则 Git 可能看不到它与当前分支共同祖先之间的父提交链。
+
+推荐同步流程：
+
+```powershell
+git fetch --filter=blob:none --no-tags --deepen=200 origin main
+git merge origin/main
+```
+
+如果提示历史太浅、找不到共同祖先，或 merge 失败原因指向 shallow history，再按需加深：
+
+```powershell
+git fetch --filter=blob:none --no-tags --deepen=500 origin main
+git merge origin/main
+```
+
+同步前后建议检查共同祖先：
+
+```powershell
+git merge-base HEAD origin/main
+```
+
 ## 最终目标
 
 通过源码级修改，将 TDLib 外部媒体缓存目录固定迁移到：
