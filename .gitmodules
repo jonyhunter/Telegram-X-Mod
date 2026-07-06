@@ -58,7 +58,7 @@
 	branch = main
 [submodule "vkryl/leveldb"]
 	path = vkryl/leveldb
-	url = https://github.com/TGX-Android/leveldb
+	url = https://github.com/jonyhunter/leveldb.git
 	shallow = true
 	branch = main
 [submodule "vkryl/core"]
