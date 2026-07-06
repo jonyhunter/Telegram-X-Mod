@@ -58,6 +58,7 @@ data class ApplicationConfig(
   val sourceCodeUrl: String,
 
   val applicationVersion: Int,
+  val outputVersionCode: Int,
   val majorVersion: Int,
 
   val isExperimentalBuild: Boolean,
@@ -89,6 +90,8 @@ data class ApplicationConfig(
 
   val outputFileNamePrefix: String,
   val creationDateMillis: Long,
+  val resourceConfigurations: List<String>,
+  val abiFlavors: List<String>,
 
   val keystore: Keystore?
 )

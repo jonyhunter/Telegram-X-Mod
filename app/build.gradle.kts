@@ -59,6 +59,7 @@ android {
     applicationId = config.applicationId
     targetSdk = config.targetSdkVersion
     multiDexEnabled = true
+    resourceConfigurations.addAll(config.resourceConfigurations)
 
     buildConfigString("PROJECT_NAME", config.applicationName)
     buildConfigBool("SHARED_STL", Config.SHARED_STL)
@@ -189,7 +190,7 @@ android {
     // WebRTC version
 
     val webrtcGit = providers.of(GitVersionValueSource::class) {
-      parameters.module = layout.projectDirectory.dir("jni/third_party/webrtc")
+      parameters.module = layout.projectDirectory.dir("jni/tgvoip/third_party/webrtc")
     }.get()
     buildConfigString("WEBRTC_COMMIT", webrtcGit.commitHashShort)
     buildConfigString("WEBRTC_COMMIT_URL", webrtcGit.commitUrl)
@@ -197,7 +198,7 @@ android {
     // tgcalls version
 
     val tgcallsGit = providers.of(GitVersionValueSource::class) {
-      parameters.module = layout.projectDirectory.dir("jni/third_party/tgcalls")
+      parameters.module = layout.projectDirectory.dir("jni/tgvoip/third_party/tgcalls")
     }.get()
     buildConfigString("TGCALLS_COMMIT", tgcallsGit.commitHashShort)
     buildConfigString("TGCALLS_COMMIT_URL", tgcallsGit.commitUrl)
@@ -258,8 +259,14 @@ android {
       variantBuilder.maxSdk = sdkVariant.maxSdk
     }
     variantBuilder.enable = sdkVariant.minSdk >= abiVariant.minSdk &&
+      (config.abiFlavors.isEmpty() || config.abiFlavors.contains(abiFlavor)) &&
       !(abiVariant.flavor == "universal" && sdkVariant.flavor == "legacy") &&
-      (variantBuilder.buildType != "debug" || sdkVariant.flavor == "legacy" || (abiVariant.flavor == "x86" || abiVariant.flavor == "x64" || abiVariant.flavor == "universal"))
+      (
+        variantBuilder.buildType != "debug" ||
+        config.abiFlavors.contains(abiFlavor) ||
+        sdkVariant.flavor == "legacy" ||
+        (abiVariant.flavor == "x86" || abiVariant.flavor == "x64" || abiVariant.flavor == "universal")
+      )
   }
   productFlavors {
     Sdk.VARIANTS.forEach { (sdkIndex, variant) ->
@@ -409,7 +416,11 @@ android {
 
       variant.outputs.forEach { output ->
         baseVersionCode = output.versionCode.get()
-        val modifiedVersionCode = baseVersionCode * 1000 + flavorVersionCode
+        val modifiedVersionCode = if (config.outputVersionCode > 0) {
+          config.outputVersionCode
+        } else {
+          baseVersionCode * 1000 + flavorVersionCode
+        }
         output.versionCode.set(modifiedVersionCode)
 
         baseVersionName = output.versionName.get()
@@ -466,8 +477,9 @@ android {
           into(project.layout.buildDirectory.dir("outputs/mapping/${variant.name}"))
           rename("mapping.txt", "$fileName.txt")
         }
-        tasks.named {
-          it.startsWith("assemble") && it.endsWith("Release")
+        val assembleTaskName = "assemble${variant.name.replaceFirstChar { it.uppercase() }}"
+        tasks.matching {
+          it.name == assembleTaskName
         }.configureEach {
           finalizedBy(copyTask)
         }

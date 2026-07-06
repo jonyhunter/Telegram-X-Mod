@@ -113,9 +113,28 @@ open class ConfigurationPlugin : Plugin<Project> {
 
     val appVersionOverride = properties.getProperty("app.version", "0").toInt()
     val applicationVersion = if (appVersionOverride > 0) appVersionOverride else versions.getOrThrow("version.app").toInt()
+    val outputVersionCode = properties.getProperty("app.output_version_code", "0").toInt()
     val majorVersion = versions.getOrThrow("version.major").toInt()
 
     val sourceCodeUrl = properties.getProperty("app.sources_url", "")
+    val resourceConfigurations = properties.getProperty("app.languages", "").split(',').mapNotNull { language ->
+      when (language.trim().lowercase()) {
+        "" -> null
+        "zh-hans" -> "zh"
+        else -> language.trim().lowercase()
+      }
+    }
+    val abiFlavors = properties.getProperty("app.abis", "").split(',').mapNotNull { abi ->
+      when (abi.trim().lowercase()) {
+        "" -> null
+        "armeabi-v7a", "arm32" -> "arm32"
+        "arm64-v8a", "arm64" -> "arm64"
+        "x86" -> "x86"
+        "x86_64", "x64" -> "x64"
+        "universal" -> "universal"
+        else -> error("Unknown app.abis entry: ${abi.trim()}")
+      }
+    }
 
     val config = ApplicationConfig(
       applicationName,
@@ -123,6 +142,7 @@ open class ConfigurationPlugin : Plugin<Project> {
       appExtension,
       sourceCodeUrl,
       applicationVersion,
+      outputVersionCode,
       majorVersion,
       isExperimentalBuild,
       isHuaweiBuild,
@@ -150,6 +170,8 @@ open class ConfigurationPlugin : Plugin<Project> {
 
       outputFileNamePrefix,
       creationDateMillis,
+      resourceConfigurations,
+      abiFlavors,
 
       keystore
     )

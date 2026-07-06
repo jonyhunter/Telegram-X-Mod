@@ -73,61 +73,43 @@ abstract class GitVersionValueSource : ValueSource<GitVersionValueSource.Details
     } else {
       ""
     }
-    val output = ByteArrayOutputStream()
-    /*execOperations.exec {
-      if (System.getProperty("os.name").startsWith("Windows")) {
-        commandLine("cmd", "/C", "scripts\\windows\\git-info.cmd")
-      } else {
-        commandLine("bash", "-c", "echo \"$(git rev-parse --short HEAD) $(git rev-parse HEAD) $(git show -s --format=%ct) $(git config --get remote.origin.url) $(git log -1 --pretty=format:'%an')\"")
-      }
-      standardOutput = output
-    }*/
-    // TODO: test Windows support
-    execOperations.exec {
-      if (path.isNotEmpty()) {
-        commandLine("git", "-C", path, "rev-parse", "--short", "HEAD")
-      } else {
-        commandLine("git", "rev-parse", "--short", "HEAD")
-      }
-      standardOutput = output
+    val data = buildString {
+      appendLine(runGitCommand(path, "rev-parse", "--short", "HEAD") ?: return fallbackDetails())
+      appendLine(runGitCommand(path, "rev-parse", "HEAD") ?: return fallbackDetails())
+      appendLine(runGitCommand(path, "show", "-s", "--format=%ct") ?: return fallbackDetails())
+      appendLine(runGitCommand(path, "config", "--get", "remote.origin.url") ?: "https://github.com/TGX-Android/Telegram-X")
+      append(runGitCommand(path, "log", "-1", "--pretty=format:%an") ?: "Local Build")
     }
-    execOperations.exec {
-      if (path.isNotEmpty()) {
-        commandLine("git", "-C", path, "rev-parse", "HEAD")
-      } else {
-        commandLine("git", "rev-parse", "HEAD")
-      }
-      standardOutput = output
-    }
-    execOperations.exec {
-      if (path.isNotEmpty()) {
-        commandLine("git", "-C", path, "show", "-s", "--format=%ct")
-      } else {
-        commandLine("git", "show", "-s", "--format=%ct")
-      }
-      standardOutput = output
-    }
-    execOperations.exec {
-      if (path.isNotEmpty()) {
-        commandLine("git", "-C", path, "config", "--get", "remote.origin.url")
-      } else {
-        commandLine("git", "config", "--get", "remote.origin.url")
-      }
-      standardOutput = output
-    }
-    execOperations.exec {
-      if (path.isNotEmpty()) {
-        commandLine("git", "-C", path, "log", "-1", "--pretty=format:'%an'")
-      } else {
-        commandLine("git", "log", "-1", "--pretty=format:'%an'")
-      }
-      standardOutput = output
-    }
-    val data = String(output.toByteArray(), Charset.defaultCharset())
     val details = Details(data)
     if (URI.create(details.remoteUrl).host != "github.com") {
-      error("Unfortunately, currently you must host your fork on github.com.")
+      return fallbackDetails()
     }
     return details
+  }
+
+  private fun runGitCommand (path: String, vararg args: String): String? {
+    val output = ByteArrayOutputStream()
+    return try {
+      execOperations.exec {
+        if (path.isNotEmpty()) {
+          commandLine("git", "-C", path, *args)
+        } else {
+          commandLine("git", *args)
+        }
+        standardOutput = output
+      }
+      String(output.toByteArray(), Charset.defaultCharset()).trim().takeIf { it.isNotEmpty() }
+    } catch (t: Throwable) {
+      null
+    }
+  }
+
+  private fun fallbackDetails (): Details {
+    return Details(
+      "0000000",
+      "0000000000000000000000000000000000000000",
+      System.currentTimeMillis() / 1000L,
+      "https://github.com/TGX-Android/Telegram-X"
+    )
   }
 }

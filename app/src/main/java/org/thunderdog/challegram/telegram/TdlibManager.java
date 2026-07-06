@@ -2348,46 +2348,39 @@ public class TdlibManager implements Iterable<TdlibAccount>, UI.StateListener {
   }
 
   public static String getTdlibDirectory (int accountId, boolean allowExternal, boolean createIfNotFound) {
-    File file = allowExternal ? UI.getAppContext().getExternalFilesDir(null) : null;
-    if (file != null) {
+    File file;
+    if (allowExternal) {
+      file = getTelegramZDirectory();
+      if (file == null) {
+        if (!createIfNotFound)
+          return null;
+        throw new DeviceStorageError("Cannot resolve TelegramZ directory");
+      }
       try {
         File externalStorageDirectory = Environment.getExternalStorageDirectory();
         if (externalStorageDirectory != null && file.getAbsolutePath().startsWith(externalStorageDirectory.getAbsolutePath())) {
           String state = Environment.getExternalStorageState();
           if (!Environment.MEDIA_MOUNTED.equals(state)) {
-            file = null;
+            if (!createIfNotFound)
+              return null;
+            throw new DeviceStorageError("External storage is not mounted: " + state);
           }
         }
       } catch (Throwable t) {
-        t.printStackTrace();
+        if (!createIfNotFound)
+          return null;
+        throw new DeviceStorageError(t);
       }
-    }
-    if (file != null) {
-      try {
-        if (!FileUtils.createDirectory(file) || !file.canWrite()) {
-          file = null;
-        }
-      } catch (SecurityException e) {
-        e.printStackTrace();
-        file = null;
-      }
-    }
-    if (file != null) {
+
+      if (!prepareTdlibDirectory(file, createIfNotFound, "TelegramZ directory"))
+        return null;
+
       if (accountId != 0) {
         file = new File(file, "x_account" + accountId);
-        if (!file.exists()) {
-          if (createIfNotFound) {
-            if (!FileUtils.mkdirs(file))
-              throw new DeviceStorageError("Could not create external working directory: " + file.getPath());
-          } else {
-            return null;
-          }
-        }
+        if (!prepareTdlibDirectory(file, createIfNotFound, "TelegramZ account directory"))
+          return null;
       }
-      // FIXME maybe move somewhere better for accountId == 0?
     } else {
-      if (allowExternal && !createIfNotFound)
-        return null;
       file = new File(UI.getContext().getFilesDir(), accountId != 0 ? "tdlib" + accountId : "tdlib");
       if (!file.exists()) {
         if (createIfNotFound) {
@@ -2399,6 +2392,59 @@ public class TdlibManager implements Iterable<TdlibAccount>, UI.StateListener {
       }
     }
     return TD.normalizePath(file.getPath());
+  }
+
+  private static File getTelegramZDirectory () {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+      return null;
+    }
+    File externalStorageDirectory = Environment.getExternalStorageDirectory();
+    return externalStorageDirectory != null ? new File(externalStorageDirectory, "TelegramZ") : null;
+  }
+
+  private static boolean prepareTdlibDirectory (File directory, boolean createIfNotFound, String description) {
+    try {
+      if (!directory.exists()) {
+        if (!createIfNotFound)
+          return false;
+        if (!FileUtils.mkdirs(directory))
+          throw new DeviceStorageError("Cannot create " + description + ": " + directory.getPath());
+      }
+      if (!canWriteDirectory(directory))
+        throw new DeviceStorageError("Cannot write to " + description + ": " + directory.getPath());
+      createNoMediaFile(directory);
+      return true;
+    } catch (SecurityException e) {
+      if (!createIfNotFound)
+        return false;
+      throw new DeviceStorageError(e);
+    }
+  }
+
+  private static void createNoMediaFile (File directory) {
+    try {
+      File noMedia = new File(directory, ".nomedia");
+      if (!noMedia.exists()) {
+        noMedia.createNewFile();
+      }
+    } catch (Throwable t) {
+      Log.w("Cannot create .nomedia file in %s", directory);
+    }
+  }
+
+  private static boolean canWriteDirectory (File directory) {
+    File probeFile = null;
+    try {
+      probeFile = File.createTempFile(".tdlib_write_probe", null, directory);
+      return true;
+    } catch (Throwable t) {
+      Log.w("Cannot write to TDLib directory %s", directory);
+      return false;
+    } finally {
+      if (probeFile != null && probeFile.exists() && !probeFile.delete()) {
+        Log.w("Cannot delete TDLib directory write probe %s", probeFile);
+      }
+    }
   }
 
   public static File getTgvoipDirectory () {

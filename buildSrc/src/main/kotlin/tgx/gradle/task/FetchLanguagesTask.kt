@@ -134,12 +134,15 @@ open class FetchLanguagesTask : BaseTask() {
       .url("https://translations.telegram.org/languages/list/${Telegram.LANGUAGE_PACK}")
       .build()
     ).execute().body.string()
+    val selectedLanguages = applicationLanguages()
     val languageCodes = Json.parseToJsonElement(languageCodesJson).jsonObject["lang_codes"]!!.jsonArray.map {
       it.jsonPrimitive.content
+    }.filter {
+      selectedLanguages.isEmpty() || selectedLanguages.contains(it)
     }.sortedWith { a, b ->
       (b == defaultLanguageCode).compareTo(a == defaultLanguageCode)
     }
-    if (languageCodes[0] != defaultLanguageCode) {
+    if (languageCodes.isEmpty() || languageCodes[0] != defaultLanguageCode) {
       fatal("Default language not found: $languageCodes")
     }
 

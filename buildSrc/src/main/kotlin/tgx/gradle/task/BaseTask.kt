@@ -42,4 +42,7 @@ abstract class BaseTask : DefaultTask() {
 
   fun applicationId (): String = propertyOrSample("app.id")
   fun applicationName (): String = propertyOrSample("app.name")
+  fun applicationLanguages (): List<String> = properties.getProperty("app.languages", "").split(',').mapNotNull {
+    it.trim().lowercase().takeIf { language -> language.isNotEmpty() }
+  }
 }

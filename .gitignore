@@ -1,20 +1,56 @@
+# OS / editor noise
 .DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
 
-.gradle
-.kotlin
-.idea
-
-build
-.cxx
-.externalNativeBuild
-obj
-
-*.apk
+# IDE state
+.idea/
+.vscode/
 *.iml
+*.iws
 
-/builds
-
-/captures
+# Local machine configuration
 /local.properties
+/.codex-tools/
 
+# Gradle / Kotlin build state
+.gradle/
+.kotlin/
+/build/
+/builds/
+/app/build/
+/buildSrc/build/
+/extension/build/
+/extension/*/build/
+/tdlib/build/
+/tgcalls/build/
+
+# Android / native build state
+.cxx/
+.externalNativeBuild/
+obj/
+/captures/
+/app/.cxx/
+/app/.externalNativeBuild/
+/app/obj/
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.idsig
 libc++_shared.so
+
+# Signing material and local secrets
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# Logs / crash dumps
+*.log
+hs_err_pid*
+replay_pid*
